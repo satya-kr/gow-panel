@@ -3,15 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"net/http"
 	"os/exec"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 const port = ":3001"
 
-var services = []string{"mariadb", "nodejs", "php-fpm"}
+var services = []string{"mysql", "mariadb", "nodejs", "php-fpm", "nginx"}
 var processes = []string{"stop", "start", "status", "reload"}
 
 type UpdateRequest struct {
@@ -30,14 +31,6 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/update-service", ApiUpdateService).Methods("POST")
 	r.HandleFunc("/api/get-services", ApiGetServerStatusTypes).Methods("GET")
-
-	//for _, service := range services {
-	//	status, err := checkServiceStatus(service)
-	//	if err != nil {
-	//		log.Fatalf("Error checking %s status: %v", service, err)
-	//	}
-	//	fmt.Printf("%s service status: %s\n", service, status)
-	//}
 
 	fmt.Printf("Server is lisening on port%s", port)
 	err := http.ListenAndServe(port, r)
@@ -91,14 +84,6 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//or
-
-	//decoder := json.NewDecoder(r.Body)
-	//if err := decoder.Decode(&requestData); err != nil {
-	//	http.Error(w, "Error decoding JSON", http.StatusBadRequest)
-	//	return
-	//}
-
 	serviceName := strings.TrimSpace(requestData.Service)
 	serviceStatus := strings.TrimSpace(requestData.Status)
 
@@ -110,13 +95,13 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 		jsonRes = JsonResponse{
 			Status:  true,
 			Data:    data,
-			Message: fmt.Sprintf("Service is updated, service is %s and status is %s", requestData.Service, requestData.Status),
+			Message: fmt.Sprintf("The %s service status is updated to %s", requestData.Service, requestData.Status),
 		}
 	} else {
 		jsonRes = JsonResponse{
 			Status:  true,
 			Data:    data,
-			Message: fmt.Sprintf("Faild to update service, service is %s and status is %s", requestData.Service, requestData.Status),
+			Message: fmt.Sprintf("Faild to update %s service as %s", requestData.Service, requestData.Status),
 		}
 	}
 
@@ -130,9 +115,9 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateService(serviceName, serviceStatus string) (bool, error) {
-	fmt.Sprintf("service:%s and status:%s", serviceName, serviceStatus)
+	// fmt.Sprintf("service:%s and status:%s", serviceName, serviceStatus)
 
-	cmd := exec.Command("systemctl", serviceStatus, serviceName)
+	cmd := exec.Command("sudo", "systemctl", serviceStatus, serviceName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -143,10 +128,11 @@ func updateService(serviceName, serviceStatus string) (bool, error) {
 }
 
 func checkServiceStatus(serviceName string) (bool, error) {
-
 	cmd := exec.Command("systemctl", "is-active", serviceName)
 	output, err := cmd.CombinedOutput()
+
 	if err != nil {
+		fmt.Println(err)
 		return false, err
 	}
 	return strings.TrimSpace(string(output)) == "active", nil
