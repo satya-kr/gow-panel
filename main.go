@@ -102,25 +102,21 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 	serviceName := strings.TrimSpace(requestData.Service)
 	serviceStatus := strings.TrimSpace(requestData.Status)
 
-	if serviceName == "mariadb" {
-		//if serviceStatus == "stop" {
-		//}
-		check, err := updateService(serviceName, serviceStatus)
-		if err != nil {
-			fmt.Println(err)
+	check, err := updateService(serviceName, serviceStatus)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if check {
+		jsonRes = JsonResponse{
+			Status:  true,
+			Data:    data,
+			Message: fmt.Sprintf("Service is updated, service is %s and status is %s", requestData.Service, requestData.Status),
 		}
-		if check {
-			jsonRes = JsonResponse{
-				Status:  true,
-				Data:    data,
-				Message: fmt.Sprintf("Service is updated, service is %s and status is %s", requestData.Service, requestData.Status),
-			}
-		} else {
-			jsonRes = JsonResponse{
-				Status:  true,
-				Data:    data,
-				Message: fmt.Sprintf("Faild to update service, service is %s and status is %s", requestData.Service, requestData.Status),
-			}
+	} else {
+		jsonRes = JsonResponse{
+			Status:  true,
+			Data:    data,
+			Message: fmt.Sprintf("Faild to update service, service is %s and status is %s", requestData.Service, requestData.Status),
 		}
 	}
 
@@ -134,14 +130,20 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateService(serviceName, serviceStatus string) (bool, error) {
-	//cmd := exec.Command("systemctl", serviceStatus, serviceName)
-	//if err := cmd.Run(); err != nil {
-	//	return false, err
-	//}
+	fmt.Sprintf("service:%s and status:%s", serviceName, serviceStatus)
+
+	cmd := exec.Command("systemctl", serviceStatus, serviceName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		fmt.Println("Output:", string(output))
+		return false, err
+	}
 	return true, nil
 }
 
 func checkServiceStatus(serviceName string) (bool, error) {
+
 	cmd := exec.Command("systemctl", "is-active", serviceName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
