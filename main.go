@@ -11,7 +11,7 @@ import (
 
 const port = ":3001"
 
-var services = []string{"mariadb", "nodejs", "php-fpm"}
+var services = []string{"mysql", "mariadb", "nodejs", "php-fpm", "nginx"}
 var processes = []string{"stop", "start", "status", "reload"}
 
 type UpdateRequest struct {
@@ -102,9 +102,6 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 	serviceName := strings.TrimSpace(requestData.Service)
 	serviceStatus := strings.TrimSpace(requestData.Status)
 
-	if serviceName == "mariadb" {
-		//if serviceStatus == "stop" {
-		//}
 		check, err := updateService(serviceName, serviceStatus)
 		if err != nil {
 			fmt.Println(err)
@@ -122,7 +119,6 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 				Message: fmt.Sprintf("Faild to update service, service is %s and status is %s", requestData.Service, requestData.Status),
 			}
 		}
-	}
 
 	out, err := json.MarshalIndent(jsonRes, "", " ")
 	if err != nil {
@@ -134,17 +130,25 @@ func ApiUpdateService(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateService(serviceName, serviceStatus string) (bool, error) {
-	//cmd := exec.Command("systemctl", serviceStatus, serviceName)
-	//if err := cmd.Run(); err != nil {
-	//	return false, err
-	//}
+	fmt.Sprintf("service:%s and status:%s", serviceName, serviceStatus)
+
+	cmd := exec.Command("sudo", "systemctl", serviceStatus, serviceName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		fmt.Println("Output:", string(output))
+		return false, err
+	}
 	return true, nil
 }
+
 
 func checkServiceStatus(serviceName string) (bool, error) {
 	cmd := exec.Command("systemctl", "is-active", serviceName)
 	output, err := cmd.CombinedOutput()
+
 	if err != nil {
+	        fmt.Println(err)
 		return false, err
 	}
 	return strings.TrimSpace(string(output)) == "active", nil
